@@ -1,105 +1,93 @@
-import './style.css'
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import * as dat from 'dat.gui'
+import "./style.css";
+import * as THREE from "three";
+import { InteractionManager } from "three.interactive";
+import * as TWEEN from "@tweenjs/tween.js";
 
-// Debug
-const gui = new dat.GUI()
+const card1Container = document.querySelector(".card1");
+const WIDTH = 300;
+const HEIGHT = 400;
 
-// Canvas
-const canvas = document.querySelector('canvas.webgl')
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, WIDTH / HEIGHT, 0.1, 200);
 
-// Scene
-const scene = new THREE.Scene()
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 
-// Objects
-const geometry = new THREE.TorusGeometry( .7, .2, 16, 100 );
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(WIDTH, HEIGHT);
+card1Container.appendChild(renderer.domElement);
 
-// Materials
+const interactionManager = new InteractionManager(
+  renderer,
+  camera,
+  renderer.domElement
+);
 
-const material = new THREE.MeshBasicMaterial()
-material.color = new THREE.Color(0xff0000)
+/* geometry & materials */
 
-// Mesh
-const sphere = new THREE.Mesh(geometry,material)
-scene.add(sphere)
+const box = new THREE.BoxGeometry(2, 2, 2);
+const material = new THREE.MeshPhongMaterial({ color: 0x29d8ff });
+const cube = new THREE.Mesh(box, material);
 
-// Lights
+cube.addEventListener("mouseover", (e) => {
+  e.stopPropagation();
+  zoomIn();
+});
 
-const pointLight = new THREE.PointLight(0xffffff, 0.1)
-pointLight.position.x = 2
-pointLight.position.y = 3
-pointLight.position.z = 4
-scene.add(pointLight)
+cube.addEventListener("mouseout", (e) => {
+  e.stopPropagation();
+  zoomOut();
+});
 
-/**
- * Sizes
- */
-const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight
+interactionManager.add(cube);
+scene.add(cube);
+camera.position.z = 10;
+
+/* light */
+const pointLight1 = new THREE.PointLight(0xffffff, 1.5);
+pointLight1.position.set(2.6, 2.2, 5);
+scene.add(pointLight1);
+
+const pointLight2 = new THREE.PointLight(0xffffff, 1);
+pointLight2.position.set(-1.8, 2.2, 5);
+scene.add(pointLight2);
+
+/* rotation */
+
+function animate(time) {
+  requestAnimationFrame(animate);
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.01;
+
+  renderer.render(scene, camera);
+  interactionManager.update();
+  TWEEN.update(time);
+}
+animate();
+
+/* callback for event listeners */
+
+function zoomIn() {
+  const currentZoom = { value: camera.zoom };
+  const finalZoom = { value: 1.2 };
+
+  new TWEEN.Tween(currentZoom)
+    .to(finalZoom, 300)
+    .onUpdate(() => {
+      camera.zoom = currentZoom.value;
+      camera.updateProjectionMatrix();
+    })
+    .start();
 }
 
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+function zoomOut() {
+  const currentZoom = { value: camera.zoom };
+  const finalZoom = { value: 1 };
 
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
-
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-})
-
-/**
- * Camera
- */
-// Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 0
-camera.position.y = 0
-camera.position.z = 2
-scene.add(camera)
-
-// Controls
-// const controls = new OrbitControls(camera, canvas)
-// controls.enableDamping = true
-
-/**
- * Renderer
- */
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
-/**
- * Animate
- */
-
-const clock = new THREE.Clock()
-
-const tick = () =>
-{
-
-    const elapsedTime = clock.getElapsedTime()
-
-    // Update objects
-    sphere.rotation.y = .5 * elapsedTime
-
-    // Update Orbital Controls
-    // controls.update()
-
-    // Render
-    renderer.render(scene, camera)
-
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
+  new TWEEN.Tween(currentZoom)
+    .to(finalZoom, 300)
+    .onUpdate(() => {
+      camera.zoom = currentZoom.value;
+      camera.updateProjectionMatrix();
+    })
+    .start();
 }
-
-tick()

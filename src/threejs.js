@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { Interaction } from "three.interaction";
-import * as TWEEN from "@tweenjs/tween.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import scenesData from "./scenesData";
 import * as dat from "dat.gui";
 
 function main() {
@@ -11,6 +10,8 @@ function main() {
     alpha: true,
     antialias: true,
   });
+  /* uncomment to leverage gui debugger */
+  // const gui = new dat.GUI();
 
   function createScene(el) {
     const scene = new THREE.Scene();
@@ -30,100 +31,49 @@ function main() {
     light.position.set(-1, 2, 4);
     scene.add(light);
 
-    /* INTERACTION MANAGER */
-    const interactionManager = new Interaction(renderer, scene, camera);
-
-    return { scene, camera, el, interactionManager };
+    const interaction = new Interaction(renderer, scene, camera);
+    return { scene, camera, el, interaction };
   }
 
-  function createCube() {
-    const sceneDetails = createScene(document.querySelector("#cube"));
-    const geometry = new THREE.BoxGeometry(1.7, 1.7, 1.7);
-    const material = new THREE.MeshPhongMaterial({ color: 0x29d8ff });
-    const mesh = new THREE.Mesh(geometry, material);
-
-    sceneDetails.scene.add(mesh);
-    sceneDetails.mesh = mesh;
-    return sceneDetails;
-  }
-
-  function createSphere() {
-    const sceneDetails = createScene(document.querySelector("#sphere"));
-    const geometry = new THREE.SphereGeometry(1.2, 164, 64);
-    const material = new THREE.MeshPhongMaterial({
-      color: 0x6e6673,
-      wireframe: true,
-      shininess: 57,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-
-    sceneDetails.scene.add(mesh);
-    sceneDetails.mesh = mesh;
-
-    return sceneDetails;
-  }
-
-  function createTorus() {
-    const sceneDetails = createScene(document.querySelector("#torus"));
-    const torusGeometry = new THREE.TorusGeometry(1, 0.3, 30, 90, 6.3);
-    const torusMaterial = new THREE.MeshPhongMaterial({
-      color: 0x313dff,
-      shininess: 57,
-      specular: 0x5b5b5b,
-    });
-    const torusMesh = new THREE.Mesh(torusGeometry, torusMaterial);
-
-    const sphereGeometry = new THREE.SphereGeometry(0.5, 164, 63);
-    const sphereMaterial = new THREE.MeshPhongMaterial({
-      color: 0xff0000,
-      shininess: 57,
-      specular: 0x5b5b5b,
-    });
-    const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphereMesh.position.z = -1;
-
-    document.querySelector("#torus").addEventListener("mouseover", (e) => {
-      console.log("mouseover");
-      e.stopPropagation();
-
-      const currentSpherePosition = { value: -1 };
-      const finalSpherePosition = { value: 1 };
-
-      new TWEEN.Tween(currentSpherePosition)
-        .to(finalSpherePosition, 1000)
-        .easing(TWEEN.Easing.Quadratic.InOut)
-        .onUpdate(() => {
-          console.log("fired");
-          sphereMesh.position.z = finalSpherePosition.value;
-        })
-        .start();
-    });
-
-    document.querySelector("#torus").addEventListener("mouseout", (e) => {
-      console.log("mouseout");
-      const currentSpherePosition = { value: 1 };
-      const finalSpherePosition = { value: -1 };
-
-      new TWEEN.Tween(currentSpherePosition)
-        .to(finalSpherePosition, 1000)
-        .easing(TWEEN.Easing.Quadratic.InOut)
-        .onUpdate(() => {
-          sphereMesh.position.z = finalSpherePosition.value;
-        })
-        .start();
-    });
+  function createComposition(shapesData, elementId) {
     const group = new THREE.Group();
-    group.add(torusMesh, sphereMesh);
+    const container = document.getElementById(elementId);
+    const sceneDetails = createScene(container);
+
+    shapesData.forEach((shapeData) => {
+      if (!shapeData.mesh) {
+        throw new Error("Missing mesh");
+      }
+      const { mesh, position, rotation } = shapeData;
+
+      if (position) {
+        mesh.position.set(
+          shapeData.position.x || 0,
+          shapeData.position.y || 0,
+          shapeData.position.z || 0
+        );
+      }
+
+      if (rotation) {
+        mesh.rotation.set(
+          shapeData.rotation.x || 0,
+          shapeData.rotation.y || 0,
+          shapeData.rotation.z || 0
+        );
+      }
+
+      group.add(mesh);
+    });
 
     sceneDetails.scene.add(group);
     sceneDetails.mesh = group;
-    console.log(torusMesh);
 
     return sceneDetails;
   }
-  const cube = createCube();
-  const sphere = createSphere();
-  const torus = createTorus();
+
+  const compositions = scenesData.map((scene) =>
+    createComposition(scene.sceneData, scene.sceneId)
+  );
 
   function resizeRendererToDisplaySize(renderer) {
     const canvas = renderer.domElement;
@@ -136,20 +86,9 @@ function main() {
     return needResize;
   }
 
-  function render(sceneDetails, time) {
-    const { scene, camera, el, interactionManager } = sceneDetails;
-    const { left, right, top, bottom, width, height } =
-      el.getBoundingClientRect();
-
-    const isOffscreen =
-      bottom < 0 ||
-      top > renderer.domElement.clientHeight ||
-      right < 0 ||
-      left > renderer.domElement.clientWidth;
-
-    // if (isOffscreen) {
-    //   return;
-    // }
+  function render(sceneDetails) {
+    const { scene, camera, el } = sceneDetails;
+    const { left, bottom, width, height } = el.getBoundingClientRect();
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -163,21 +102,16 @@ function main() {
 
   function updateScreen(time) {
     requestAnimationFrame(updateScreen);
-    TWEEN.update(time);
-
     resizeRendererToDisplaySize(renderer);
 
     renderer.setScissorTest(false);
     renderer.clear(true, true);
     renderer.setScissorTest(true);
 
-    cube.mesh.rotation.y += 0.01;
-    sphere.mesh.rotation.y += 0.01;
-    torus.mesh.rotation.y += 0.01;
-
-    render(cube, time);
-    render(sphere, time);
-    render(torus, time);
+    compositions.forEach((scene) => {
+      scene.mesh.rotation.y += 0.01;
+      render(scene);
+    });
   }
   requestAnimationFrame(updateScreen);
 }

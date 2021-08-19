@@ -1,148 +1,185 @@
 import * as THREE from "three";
-import { InteractionManager } from "three.interactive";
+import { Interaction } from "three.interaction";
 import * as TWEEN from "@tweenjs/tween.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import * as dat from "dat.gui";
 
-class Object3d {
-  constructor(width = 400, height = 300, container = document.body) {
-    this.sizes = {
-      width: width,
-      height: height,
-    };
+function main() {
+  const canvas = document.getElementById("c");
+  const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    alpha: true,
+    antialias: true,
+  });
 
-    this.scene = null;
-    this.camera = null;
-    this.renderer = null;
-    this.container = container;
-    this.interactionManager = null;
-    this.cube = null;
-    this.isRenderingAllowed = false;
+  function createScene(el) {
+    const scene = new THREE.Scene();
+
+    const fov = 75;
+    const aspect = 2;
+    const near = 0.1;
+    const far = 200;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.z = 4;
+    camera.lookAt(0, 0, 0);
+
+    /* LIGHT */
+    const lightColor = 0xffffff;
+    const intensity = 1;
+    const light = new THREE.DirectionalLight(lightColor, intensity);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+
+    /* INTERACTION MANAGER */
+    const interactionManager = new Interaction(renderer, scene, camera);
+
+    return { scene, camera, el, interactionManager };
   }
 
-  start() {
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      this.sizes.width / this.sizes.height,
-      0.1,
-      200
-    );
-
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setSize(this.sizes.width, this.sizes.height);
-    this.container.appendChild(this.renderer.domElement);
-
-    new OrbitControls(this.camera, this.renderer.domElement);
-
-    this.interactionManager = new InteractionManager(
-      this.renderer,
-      this.camera,
-      this.renderer.domElement
-    );
-
-    this.setupCube();
-    this.setupLight();
-    window.addEventListener("resize", this.onDocumentResize.bind(this));
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        console.log(entry);
-        if (entry.isIntersecting) {
-          console.log("in viewport");
-          this.isRenderingAllowed = true;
-          return animate();
-        }
-        this.isRenderingAllowed = false;
-      });
-    }).observe(this.container);
-
-    const animate = (time) => {
-      if (!this.isRenderingAllowed) return;
-      requestAnimationFrame(animate);
-      this.cube.rotation.x += 0.01;
-      this.cube.rotation.y += 0.01;
-
-      this.renderer.render(this.scene, this.camera);
-      this.interactionManager.update();
-      TWEEN.update(time);
-    };
-
-    animate();
-  }
-
-  setupCube() {
-    const box = new THREE.BoxGeometry(2, 2, 2);
+  function createCube() {
+    const sceneDetails = createScene(document.querySelector("#cube"));
+    const geometry = new THREE.BoxGeometry(1.7, 1.7, 1.7);
     const material = new THREE.MeshPhongMaterial({ color: 0x29d8ff });
-    this.cube = new THREE.Mesh(box, material);
+    const mesh = new THREE.Mesh(geometry, material);
 
-    this.cube.addEventListener("mouseover", (e) => {
+    sceneDetails.scene.add(mesh);
+    sceneDetails.mesh = mesh;
+    return sceneDetails;
+  }
+
+  function createSphere() {
+    const sceneDetails = createScene(document.querySelector("#sphere"));
+    const geometry = new THREE.SphereGeometry(1.2, 164, 64);
+    const material = new THREE.MeshPhongMaterial({
+      color: 0x6e6673,
+      wireframe: true,
+      shininess: 57,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+
+    sceneDetails.scene.add(mesh);
+    sceneDetails.mesh = mesh;
+
+    return sceneDetails;
+  }
+
+  function createTorus() {
+    const sceneDetails = createScene(document.querySelector("#torus"));
+    const torusGeometry = new THREE.TorusGeometry(1, 0.3, 30, 90, 6.3);
+    const torusMaterial = new THREE.MeshPhongMaterial({
+      color: 0x313dff,
+      shininess: 57,
+      specular: 0x5b5b5b,
+    });
+    const torusMesh = new THREE.Mesh(torusGeometry, torusMaterial);
+
+    const sphereGeometry = new THREE.SphereGeometry(0.5, 164, 63);
+    const sphereMaterial = new THREE.MeshPhongMaterial({
+      color: 0xff0000,
+      shininess: 57,
+      specular: 0x5b5b5b,
+    });
+    const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphereMesh.position.z = -1;
+
+    document.querySelector("#torus").addEventListener("mouseover", (e) => {
+      console.log("mouseover");
       e.stopPropagation();
-      this.zoomIn();
+
+      const currentSpherePosition = { value: -1 };
+      const finalSpherePosition = { value: 1 };
+
+      new TWEEN.Tween(currentSpherePosition)
+        .to(finalSpherePosition, 1000)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(() => {
+          console.log("fired");
+          sphereMesh.position.z = finalSpherePosition.value;
+        })
+        .start();
     });
 
-    this.cube.addEventListener("mouseout", (e) => {
-      e.stopPropagation();
-      this.zoomOut();
+    document.querySelector("#torus").addEventListener("mouseout", (e) => {
+      console.log("mouseout");
+      const currentSpherePosition = { value: 1 };
+      const finalSpherePosition = { value: -1 };
+
+      new TWEEN.Tween(currentSpherePosition)
+        .to(finalSpherePosition, 1000)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(() => {
+          sphereMesh.position.z = finalSpherePosition.value;
+        })
+        .start();
     });
+    const group = new THREE.Group();
+    group.add(torusMesh, sphereMesh);
 
-    this.interactionManager.add(this.cube);
-    this.scene.add(this.cube);
-    this.camera.position.z = 4;
+    sceneDetails.scene.add(group);
+    sceneDetails.mesh = group;
+    console.log(torusMesh);
+
+    return sceneDetails;
+  }
+  const cube = createCube();
+  const sphere = createSphere();
+  const torus = createTorus();
+
+  function resizeRendererToDisplaySize(renderer) {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+      renderer.setSize(width, height, false);
+    }
+    return needResize;
   }
 
-  setupLight() {
-    const pointLight1 = new THREE.PointLight(0xffffff, 1.5);
-    pointLight1.position.set(2.6, 2.2, 5);
-    this.scene.add(pointLight1);
+  function render(sceneDetails, time) {
+    const { scene, camera, el, interactionManager } = sceneDetails;
+    const { left, right, top, bottom, width, height } =
+      el.getBoundingClientRect();
 
-    const pointLight2 = new THREE.PointLight(0xffffff, 1);
-    pointLight2.position.set(-1.8, 2.2, 5);
-    this.scene.add(pointLight2);
+    const isOffscreen =
+      bottom < 0 ||
+      top > renderer.domElement.clientHeight ||
+      right < 0 ||
+      left > renderer.domElement.clientWidth;
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    this.scene.add(directionalLight);
+    // if (isOffscreen) {
+    //   return;
+    // }
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+
+    const positiveYUpBottom = renderer.domElement.clientHeight - bottom;
+    renderer.setScissor(left, positiveYUpBottom, width, height);
+    renderer.setViewport(left, positiveYUpBottom, width, height);
+
+    renderer.render(scene, camera);
   }
 
-  zoomIn() {
-    const currentZoom = { value: this.camera.zoom };
-    const finalZoom = { value: 1.2 };
+  function updateScreen(time) {
+    requestAnimationFrame(updateScreen);
+    TWEEN.update(time);
 
-    new TWEEN.Tween(currentZoom)
-      .to(finalZoom, 300)
-      .onUpdate(() => {
-        this.camera.zoom = currentZoom.value;
-        this.camera.updateProjectionMatrix();
-      })
-      .start();
+    resizeRendererToDisplaySize(renderer);
+
+    renderer.setScissorTest(false);
+    renderer.clear(true, true);
+    renderer.setScissorTest(true);
+
+    cube.mesh.rotation.y += 0.01;
+    sphere.mesh.rotation.y += 0.01;
+    torus.mesh.rotation.y += 0.01;
+
+    render(cube, time);
+    render(sphere, time);
+    render(torus, time);
   }
-
-  zoomOut() {
-    const currentZoom = { value: this.camera.zoom };
-    const finalZoom = { value: 1 };
-
-    new TWEEN.Tween(currentZoom)
-      .to(finalZoom, 300)
-      .onUpdate(() => {
-        this.camera.zoom = currentZoom.value;
-        this.camera.updateProjectionMatrix();
-      })
-      .start();
-  }
-
-  onDocumentResize() {
-    this.renderer.setSize(
-      this.container.clientWidth,
-      this.container.clientHeight
-    );
-    this.camera.aspect =
-      this.container.clientWidth / this.container.clientHeight;
-    this.camera.updateProjectionMatrix();
-  }
+  requestAnimationFrame(updateScreen);
 }
 
-window.addEventListener("load", () => {
-  const container = document.querySelector(".card1");
-  const object3d = new Object3d(container.clientWidth, 300, container);
-  object3d.start();
-});
+main();

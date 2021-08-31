@@ -3,17 +3,17 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 
 export default [
   {
-    sceneId: "composition1",
-    sceneData: [
+    sceneId: "#composition1",
+    sceneObjects: [
       {
         mesh: new THREE.Mesh(
-          new RoundedBoxGeometry(1.7, 1.7, 1.7, 30, 0.4),
+          new THREE.BoxGeometry(1, 1, 1),
           new THREE.MeshPhongMaterial({ color: 0xf2f2f2, shininess: 15 })
         ),
         position: {
-          x: -1,
+          x: 0,
           y: 0,
-          z: -0.8,
+          z: 0,
         },
         rotation: {
           x: 0.7,
@@ -34,7 +34,7 @@ export default [
       },
       {
         mesh: new THREE.Mesh(
-          new RoundedBoxGeometry(1.7, 1.7, 0.7, 31, 0.2),
+          new THREE.BoxGeometry(1, 1, 1),
           new THREE.MeshPhongMaterial({
             color: 0xf2f2f2,
             shininess: 15,
@@ -54,11 +54,11 @@ export default [
     ],
   },
   {
-    sceneId: "composition2",
-    sceneData: [
+    sceneId: "#composition2",
+    sceneObjects: [
       {
         mesh: new THREE.Mesh(
-          new THREE.SphereGeometry(1.2, 164, 64),
+          new THREE.SphereGeometry(1, 164, 64),
           new THREE.MeshPhongMaterial({
             color: 0x6e6673,
             wireframe: true,
@@ -69,8 +69,8 @@ export default [
     ],
   },
   {
-    sceneId: "composition3",
-    sceneData: [
+    sceneId: "#composition3",
+    sceneObjects: [
       {
         mesh: new THREE.Mesh(
           new THREE.TorusGeometry(1, 0.3, 30, 90, 6.3),
@@ -90,9 +90,9 @@ export default [
             specular: 0x5b5b5b,
           })
         ),
-        position: {
-          z: -1,
-        },
+        // position: {
+        //   z: -1,
+        // },
       },
     ],
   },

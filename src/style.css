@@ -20,7 +20,7 @@ img {
 
 canvas {
   display: block;
-  position: fixed;
+  position: absolute;
   left: 0;
   top: 0;
   width: 100%;
@@ -34,4 +34,5 @@ h3 {
 
 .shape3d {
   height: 300px;
+  position: relative;
 }
